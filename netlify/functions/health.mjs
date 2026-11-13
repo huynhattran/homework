@@ -1,11 +1,13 @@
-
 import { firebaseAdmin } from "./_firebase.mjs";
 
 export default async () => {
   try {
     const { auth, db } = firebaseAdmin();
 
+    // Kiểm tra Firebase Authentication
     await auth.listUsers(1);
+
+    // Kiểm tra Firestore
     await db.collection("users").limit(1).get();
 
     return new Response(
