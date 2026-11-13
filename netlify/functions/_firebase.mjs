@@ -34,5 +34,11 @@ export async function requireUser(event, allowedRoles = []) {
 }
 
 export function json(statusCode, data) {
-  return { statusCode, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }, body: JSON.stringify(data) };
+  return new Response(JSON.stringify(data), {
+    status: statusCode,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store"
+    }
+  });
 }
