@@ -1,5 +1,15 @@
-export default async () => ({
-  statusCode: 200,
-  headers: { "content-type": "application/json; charset=utf-8" },
-  body: JSON.stringify({ ok: true, service: "EduQuiz Pro API" })
-});
+
+export default async () => {
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      service: "EduQuiz Pro API"
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8"
+      }
+    }
+  );
+};
