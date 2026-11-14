@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduQuiz Pro – Kiểm tra Firebase</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#f1f5f9;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#0f172a}
+    main{width:min(100%,460px);background:white;padding:28px;border:1px solid #e2e8f0;border-radius:22px;box-shadow:0 15px 45px #0f172a12}
+    h1{font-size:22px;margin:0 0 8px}p{color:#64748b;font-size:14px;line-height:1.6}
+    label{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}input{width:100%;padding:12px 13px;border:1px solid #cbd5e1;border-radius:10px;font:inherit}
+    button{width:100%;margin-top:18px;padding:13px;border:0;border-radius:10px;background:#4f46e5;color:white;font-weight:700;font-size:15px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
+    #result{margin-top:18px;padding:13px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6}
+    .hint{font-size:12px;color:#64748b;margin-top:14px}
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<main>
+  <h1>🔧 Kiểm tra kết nối Firebase</h1>
+  <p>Trang kiểm tra tạm thời cho EduQuiz Pro. Nó chỉ thử đăng nhập và đọc hồ sơ của chính tài khoản đó; không tạo, sửa hoặc xóa dữ liệu.</p>
+  <form id="checkForm">
+    <label for="username">Tên tài khoản</label>
+    <input id="username" autocomplete="username" required placeholder="Ví dụ: admin">
+    <label for="password">Mật khẩu</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button id="submitBtn" type="submit">Kiểm tra Firebase</button>
+  </form>
+  <div id="result" role="status">Đang chờ kiểm tra…</div>
+  <div class="hint">Mật khẩu không được lưu vào trang này. Dùng tài khoản đã được tạo trong Firebase Authentication, không dùng tài khoản demo cũ của trình duyệt.</div>
+</main>
+<script>
+(() => {
+  const firebaseConfig = {
+    apiKey: "AIzaSyCerOltVWi-xy3YKsF2xh8aTP0G38bN1gg",
+    authDomain: "eduquiz-bef6d.firebaseapp.com",
+    projectId: "eduquiz-bef6d",
+    storageBucket: "eduquiz-bef6d.firebasestorage.app",
+    messagingSenderId: "444512611127",
+    appId: "1:444512611127:web:59c094c1278f88fe08c8b2"
+  };
+  const result = document.getElementById('result');
+  const form = document.getElementById('checkForm');
+  const button = document.getElementById('submitBtn');
+  let auth, db;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    result.textContent = '✅ Firebase SDK đã khởi tạo. Nhập tài khoản để kiểm tra đăng nhập và Firestore.';
+  } catch (err) {
+    result.textContent = '❌ Không khởi tạo được Firebase: ' + (err.message || err);
+  }
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!auth || !db) return;
+    const accountInput = document.getElementById('username').value.trim().toLowerCase();
+    const email = accountInput.includes('@') ? accountInput : accountInput + '@eduquiz.invalid';
+    const password = document.getElementById('password').value;
+    if (!email.includes('@') || email.length > 254) {
+      result.textContent = '❌ Nhập tên tài khoản hợp lệ hoặc email đã đăng ký trong Firebase Authentication.';
+      return;
+    }
+    button.disabled = true;
+    button.textContent = 'Đang kiểm tra…';
+    result.textContent = 'Đang đăng nhập Firebase Authentication…';
+    try {
+      const credential = await auth.signInWithEmailAndPassword(email, password);
+      const user = credential.user;
+      result.textContent = '✅ Đăng nhập Authentication thành công.\nUID: ' + user.uid + '\nĐang đọc users/' + user.uid + '…';
+      const profileSnap = await db.collection('users').doc(user.uid).get();
+      if (!profileSnap.exists) {
+        result.textContent += '\n\n❌ Đăng nhập được nhưng chưa có hồ sơ tương ứng trong Firestore (users/' + user.uid + ').';
+      } else {
+        const profile = profileSnap.data() || {};
+        result.textContent = '🎉 KẾT NỐI THÀNH CÔNG!\n\nAuthentication: OK\nFirestore đọc hồ sơ: OK\nUID: ' + user.uid + '\nTên tài khoản: ' + (profile.username || accountInput) + '\nVai trò: ' + (profile.role || 'chưa khai báo') + '\nTrạng thái: ' + (profile.status || 'chưa khai báo') + '\n\nTrang kiểm tra không ghi hoặc thay đổi dữ liệu.';
+      }
+    } catch (err) {
+      const messages = {
+        'auth/invalid-credential': 'Sai tên tài khoản hoặc mật khẩu (hoặc tài khoản chưa được tạo trong Firebase Authentication).',
+        'auth/user-not-found': 'Không tìm thấy tài khoản Firebase.',
+        'auth/wrong-password': 'Mật khẩu không chính xác.',
+        'auth/unauthorized-domain': 'Tên miền huynhattran.github.io chưa được thêm vào Authorized domains.',
+        'permission-denied': 'Firestore từ chối đọc hồ sơ. Kiểm tra Firestore Rules: users/{uid} cần cho phép tài khoản đọc đúng hồ sơ của chính mình.'
+      };
+      result.textContent = '❌ ' + (messages[err.code] || err.message || 'Có lỗi không xác định.') + '\nMã lỗi: ' + (err.code || 'unknown');
+    } finally {
+      try { await auth.signOut(); } catch (_) {}
+      document.getElementById('password').value = '';
+      button.disabled = false;
+      button.textContent = 'Kiểm tra lại';
+    }
+  });
+})();
+</script>
+</body>
+</html>
